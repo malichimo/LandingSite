@@ -200,7 +200,7 @@
         
         // Set the banner for the current month
         const monthBanner = document.getElementById("monthBanner");
-        monthBanner.innerHTML = `<img src="/mnt/data/${monthImages[monthNames[month]]}" alt="${monthNames[month]}" />`;
+        monthBanner.innerHTML = `<img src="${monthImages[monthNames[month]]}" alt="${monthNames[month]}" />`;
 
         // Fill the calendar with days
         const calendarBody = document.querySelector("#calendar tbody");
@@ -318,6 +318,3 @@
     </script>
   </body>
 </html>
-
-
-
