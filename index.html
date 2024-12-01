@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Classroom Calendar</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #add8e6; /* Light blue background */
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      header {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 20px;
+        background-color: #ffffff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .sign-in-btn, .sign-out-btn {
+        background-color: green;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        font-size: 16px;
+        cursor: pointer;
+        border-radius: 5px;
+      }
+      .sign-out-btn {
+        background-color: red; /* Red background for Sign-Out */
+      }
+      h1 {
+        color: green;
+        margin: 20px 0;
+      }
+      p {
+        font-size: 18px;
+        margin: 10px 20px;
+        text-align: center;
+      }
+      .month-banner {
+        width: 100%;
+        text-align: center;
+        margin: 20px;
+      }
+      table {
+        width: 60%;
+        margin: 20px auto;
+        border-collapse: collapse;
+        background-color: #ffffff; /* White background for the calendar */
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      th, td {
+        border: 1px solid #ddd;
+        text-align: center;
+        padding: 10px;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      td {
+        cursor: pointer;
+        position: relative;
+      }
+      td[contenteditable="true"]:focus {
+        background-color: #eef; /* Highlight editable cell */
+        outline: none;
+      }
+      .event-dropdown {
+        margin: 20px;
+        display: none; /* Hidden by default */
+      }
+      button {
+        margin: 10px;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      .neon-green {
+        color: #39ff14; /* Neon green */
+        font-weight: bold;
+      }
+      .event-image {
+        width: 50px;
+        height: 50px;
+        margin-left: 10px;
+      }
+      /* Mobile-Friendly Adjustments */
+      @media (max-width: 600px) {
+        table {
+          width: 90%;
+        }
+        header {
+          flex-direction: column;
+          align-items: center;
+        }
+        .sign-in-btn, .sign-out-btn {
+          width: 100%;
+          margin-top: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Mr. Souza's Classroom Website</h1>
+      <button class="sign-in-btn" id="signInButton" onclick="teacherSignIn()">Teacher Sign-In</button>
+      <button class="sign-out-btn" id="signOutButton" onclick="teacherSignOut()" style="display:none;">Sign-Out</button>
+    </header>
+    <p>Welcome, students and parents! This website is your go-to resource for staying connected with what is happening in class. Check regularly for updates, important messages, and events to make sure you are informed and ready for success. Thank you for being part of our learning journey!</p>
+    
+    <!-- Month Banner -->
+    <div class="month-banner" id="monthBanner">
+      <!-- Banner will be inserted here dynamically -->
+    </div>
+
+    <!-- Event Dropdown Menu -->
+    <div class="event-dropdown" id="addEventSection">
+      <label for="eventType">Add Event:</label>
+      <select id="eventType">
+        <option value="Homework">Homework</option>
+        <option value="Topic">Topic</option>
+        <option value="Test">Test</option>
+      </select>
+      <input type="text" id="eventDescription" placeholder="Enter details" />
+      
+      <!-- Clipart Selection -->
+      <label for="eventImage">Select Clipart:</label>
+      <select id="eventImage">
+        <option value="">Select Image</option>
+        <option value="turkey.png">Cartoon Turkey (Thanksgiving)</option>
+        <!-- Add more options for different cliparts -->
+      </select>
+      
+      <input type="file" id="uploadImage" accept="image/*" />
+      
+      <button onclick="addEvent()">Add Event</button>
+      <p id="eventConfirmation" style="color: green;"></p> <!-- Confirmation message -->
+    </div>
+    
+    <!-- Calendar Table -->
+    <table id="calendar">
+      <thead>
+        <tr>
+          <th>Sun</th>
+          <th>Mon</th>
+          <th>Tue</th>
+          <th>Wed</th>
+          <th>Thu</th>
+          <th>Fri</th>
+          <th>Sat</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Calendar content will be dynamically inserted here -->
+      </tbody>
+    </table>
+    
+    <button onclick="prevMonth()">Previous Month</button>
+    <button onclick="nextMonth()">Next Month</button>
+    <button onclick="saveCalendar()">Save Changes</button>
+    <button onclick="loadCalendar()">Load Saved Calendar</button>
+    
+    <script>
+      const calendarId = "eventCalendar"; // Key for localStorage
+      let selectedCell = null;
+      let teacherSignedIn = false;
+      let currentDate = new Date();
+      
+      // Month names and their corresponding banner image filenames
+      const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ];
+      
+      const monthImages = {
+        "January": "January.jpg",
+        "February": "February.jpg",
+        "March": "March.jpg",
+        "April": "April.jpg",
+        "May": "May.jpg",
+        "June": "June.jpg",
+        "July": "July.jpg",
+        "August": "August.jpg",
+        "September": "September.jpg",
+        "October": "October.jpg",
+        "November": "November.jpg",
+        "December": "December.jpg"
+      };
+
+      // Initialize calendar with the current month
+      function loadCalendar() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth(); // 0-based (0 = January, 11 = December)
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        
+        // Set the banner for the current month
+        const monthBanner = document.getElementById("monthBanner");
+        monthBanner.innerHTML = `<img src="/mnt/data/${monthImages[monthNames[month]]}" alt="${monthNames[month]}" />`;
+
+        // Fill the calendar with days
+        const calendarBody = document.querySelector("#calendar tbody");
+        calendarBody.innerHTML = ""; // Clear any previous content
+        let row = document.createElement("tr");
+
+        // Fill empty cells before the first day of the month
+        for (let i = 0; i < firstDay.getDay(); i++) {
+          row.appendChild(document.createElement("td"));
+        }
+
+        // Add day cells for the current month
+        for (let day = 1; day <= lastDay.getDate(); day++) {
+          const cell = document.createElement("td");
+          cell.textContent = day;
+          cell.setAttribute("contenteditable", "true");
+
+          // Add click event to select the cell
+          cell.addEventListener("click", () => {
+            selectedCell = cell;
+            alert("Selected date: " + day);
+          });
+
+          row.appendChild(cell);
+
+          // Start a new row after Saturday (7th day)
+          if (row.children.length === 7) {
+            calendarBody.appendChild(row);
+            row = document.createElement("tr");
+          }
+        }
+
+        // Add the last row if it's incomplete
+        if (row.children.length > 0) {
+          calendarBody.appendChild(row);
+        }
+      }
+
+      // Function to go to the previous month
+      function prevMonth() {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        loadCalendar();
+      }
+
+      // Function to go to the next month
+      function nextMonth() {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        loadCalendar();
+      }
+
+      // Teacher sign-in function
+      function teacherSignIn() {
+        const username = prompt("Enter your username:");
+        const password = prompt("Enter your password:");
+        if (username === "ssouza@dextersouthfield.org" && password === "Turley1972$") {
+          teacherSignedIn = true;
+          document.getElementById("addEventSection").style.display = "block";
+          document.getElementById("signInButton").style.display = "none"; // Hide Sign-In
+          document.getElementById("signOutButton").style.display = "inline-block"; // Show Sign-Out
+          alert("Sign-in successful. Add Event section is now enabled.");
+        } else {
+          alert("Invalid username or password. Please try again.");
+        }
+      }
+
+      // Teacher sign-out function
+      function teacherSignOut() {
+        teacherSignedIn = false;
+        document.getElementById("addEventSection").style.display = "none"; // Hide Add Event section
+        document.getElementById("signInButton").style.display = "inline-block"; // Show Sign-In
+        document.getElementById("signOutButton").style.display = "none"; // Hide Sign-Out
+        alert("You have signed out.");
+      }
+
+      // Function to add an event with clipart
+      function addEvent() {
+        if (!teacherSignedIn) {
+          alert("Please sign in to add events.");
+          return;
+        }
+        if (!selectedCell) {
+          alert("Please select a date first.");
+          return;
+        }
+        const eventType = document.getElementById("eventType").value;
+        const eventDescription = document.getElementById("eventDescription").value.trim();
+        const selectedImage = document.getElementById("eventImage").value;
+        const uploadImage = document.getElementById("uploadImage").files[0];
+        
+        let eventImageElement = "";
+        
+        // Use the selected image or uploaded image
+        if (selectedImage) {
+          eventImageElement = `<img src="images/${selectedImage}" class="event-image" alt="Event Image" />`;
+        } else if (uploadImage) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            eventImageElement = `<img src="${e.target.result}" class="event-image" alt="Uploaded Event Image" />`;
+            selectedCell.innerHTML += `<br><span class="neon-green"><strong>${eventType}:</strong> ${eventDescription}</span>${eventImageElement}`;
+          };
+          reader.readAsDataURL(uploadImage);
+          return;
+        }
+
+        if (eventDescription || eventImageElement) {
+          selectedCell.innerHTML += `<br><span class="neon-green"><strong>${eventType}:</strong> ${eventDescription}</span>${eventImageElement}`;
+          document.getElementById("eventConfirmation").textContent = "Event added successfully!";
+        } else {
+          alert("Please enter event details or select an image.");
+        }
+      }
+
+      // Load calendar data on page load
+      window.onload = loadCalendar;
+    </script>
+  </body>
+</html>
+
+
+
